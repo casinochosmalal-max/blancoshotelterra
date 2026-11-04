@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --primary: 199 89% 32%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 30% 94%;
+    --secondary-foreground: 222 47% 15%;
+    --muted: 210 30% 95%;
+    --muted-foreground: 215 16% 45%;
+    --accent: 199 60% 94%;
+    --accent-foreground: 199 89% 22%;
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 26 90% 30%;
+    --success: 152 65% 33%;
+    --success-foreground: 0 0% 100%;
+    --border: 214 25% 88%;
+    --input: 214 25% 85%;
+    --ring: 199 89% 40%;
+    --radius: 0.6rem;
+  }
+  .dark {
+    --background: 222 40% 8%;
+    --foreground: 210 30% 96%;
+    --card: 222 35% 11%;
+    --card-foreground: 210 30% 96%;
+    --primary: 199 85% 55%;
+    --primary-foreground: 222 47% 8%;
+    --secondary: 222 25% 18%;
+    --secondary-foreground: 210 30% 96%;
+    --muted: 222 25% 16%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 222 25% 18%;
+    --accent-foreground: 210 30% 96%;
+    --destructive: 0 70% 55%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 38 95% 70%;
+    --success: 152 55% 45%;
+    --border: 222 20% 22%;
+    --input: 222 20% 25%;
+    --ring: 199 85% 55%;
+  }
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type="number"] { -moz-appearance: textfield; }
+}
+
+.pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0.75rem); }
