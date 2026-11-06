@@ -19,11 +19,12 @@ async function verificarAdmin() {
   return user.id;
 }
 
-async function ejecutar<T>(fn: (yo: string) => Promise<T>): Promise<Resultado<T>> {
+async function ejecutar<T>(fn: (yo: string) => Promise<T>, { revalidar = true } = {}): Promise<Resultado<T>> {
   try {
     const yo = await verificarAdmin();
     const data = await fn(yo);
-    revalidatePath("/hotel/usuarios");
+    // revalidatePath sólo es válido en acciones (no durante el render de la página).
+    if (revalidar) revalidatePath("/hotel/usuarios");
     return { ok: true, data };
   } catch (e) {
     return { ok: false, error: traducir((e as Error).message) };
@@ -65,7 +66,7 @@ export async function listarUsuarios(): Promise<Resultado<UsuarioAdmin[]>> {
         };
       })
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
-  });
+  }, { revalidar: false });
 }
 
 export async function crearUsuario(input: {
