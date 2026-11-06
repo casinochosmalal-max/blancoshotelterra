@@ -26,7 +26,13 @@ export function NuevoRemitoForm({
   const [notas, setNotas] = useState("");
   const [pending, start] = useTransition();
 
-  const filas = useMemo(() => stock.filter((s) => s.edificio_id === edificioId), [stock, edificioId]);
+  // Primero los artículos con stock en depósito o habitaciones; dentro de cada grupo, el orden del maestro.
+  const filas = useMemo(() => {
+    const conStock = (s: StockResumen) => (s.deposito > 0 || s.habitaciones > 0 ? 0 : 1);
+    return stock
+      .filter((s) => s.edificio_id === edificioId)
+      .sort((a, b) => conStock(a) - conStock(b) || a.orden - b.orden);
+  }, [stock, edificioId]);
   const total = filas.reduce((a, f) => a + (Number(cant[f.articulo_id]) || 0), 0);
   const excedidos = filas.filter((f) => (Number(cant[f.articulo_id]) || 0) > f[origen]);
   const cupo = 2 - (enviosHoy[edificioId] ?? 0);
