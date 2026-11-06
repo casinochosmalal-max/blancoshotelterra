@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Save, Send } from "lucide-react";
+import { CheckCircle2, Loader2, Save, Search, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,9 @@ import { Input, Label, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { crearRemito } from "@/app/actions/remitos";
 import type { Edificio, StockResumen } from "@/types/database";
+
+/** Minúsculas y sin acentos, para buscar "sabana" y encontrar "Sábanas". */
+const normalizar = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export function NuevoRemitoForm({
   edificios,
@@ -36,6 +39,14 @@ export function NuevoRemitoForm({
   const fechaTxt = new Date(`${fecha}T12:00:00`).toLocaleDateString("es-AR");
   const historico = !!inicioStock && fecha < inicioStock;
   const [pending, start] = useTransition();
+  const [busqueda, setBusqueda] = useState("");
+  // Artículos ya cargados, en el orden en que se cargaron. Se reordena al salir del campo
+  // (no mientras se escribe) para que la fila no salte debajo del dedo.
+  const [cargados, setCargados] = useState<number[]>([]);
+  const confirmar = (id: number) => {
+    const v = Number(cant[id]) || 0;
+    setCargados((c) => (v > 0 ? (c.includes(id) ? c : [...c, id]) : c.filter((x) => x !== id)));
+  };
 
   // Primero los artículos con stock en depósito o habitaciones; dentro de cada grupo, el orden del maestro.
   const filas = useMemo(() => {
@@ -44,6 +55,13 @@ export function NuevoRemitoForm({
       .filter((s) => s.edificio_id === edificioId)
       .sort((a, b) => conStock(a) - conStock(b) || a.orden - b.orden);
   }, [stock, edificioId]);
+  // Arriba los cargados (siempre visibles); debajo el resto, filtrado por la búsqueda.
+  const visibles = useMemo(() => {
+    const q = normalizar(busqueda.trim());
+    const arriba = cargados.map((id) => filas.find((f) => f.articulo_id === id)).filter((f) => f !== undefined);
+    const resto = filas.filter((f) => !cargados.includes(f.articulo_id) && (!q || normalizar(f.articulo_nombre).includes(q)));
+    return { arriba, resto };
+  }, [filas, cargados, busqueda]);
   const total = filas.reduce((a, f) => a + (Number(cant[f.articulo_id]) || 0), 0);
   const excedidos = historico ? [] : filas.filter((f) => (Number(cant[f.articulo_id]) || 0) > f[origen]);
   const cupo = 2 - enviosDe(edificioId);
@@ -62,6 +80,44 @@ export function NuevoRemitoForm({
       toast.success(enviar ? "Envío registrado. El lavadero fue notificado." : "Borrador guardado");
       router.push(`/hotel/remitos/${r.data!.id}`);
     });
+
+  const fila = (f: StockResumen) => {
+    const v = Number(cant[f.articulo_id]) || 0;
+    const excede = !historico && v > f[origen];
+    const cargado = v > 0 && !excede;
+    return (
+      <div
+        key={f.articulo_id}
+        className={cn(
+          "flex items-center gap-3 rounded-lg border p-3 transition-colors",
+          cargado && "border-success/60 bg-success/10",
+          excede && "border-destructive bg-destructive/5",
+        )}
+      >
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1.5 font-medium">
+            {cargado && <CheckCircle2 className="size-4 shrink-0 text-success" />}
+            {f.articulo_nombre}
+          </p>
+          <p className={cn("text-xs", excede ? "text-destructive" : "text-muted-foreground")}>
+            Disponible en {origen === "deposito" ? "depósito" : "habitaciones"}: {f[origen]}
+          </p>
+        </div>
+        <Input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          placeholder="0"
+          value={cant[f.articulo_id] ?? ""}
+          onFocus={(e) => e.target.select()}
+          onChange={(e) => setCant({ ...cant, [f.articulo_id]: e.target.value })}
+          onBlur={() => confirmar(f.articulo_id)}
+          onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+          className={cn("h-11 w-24 text-center text-lg tabular-nums", cargado && "border-success font-semibold")}
+        />
+      </div>
+    );
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -113,29 +169,42 @@ export function NuevoRemitoForm({
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
-          {filas.map((f) => {
-            const v = Number(cant[f.articulo_id]) || 0;
-            const excede = !historico && v > f[origen];
-            return (
-              <div key={f.articulo_id} className={cn("flex items-center gap-3 rounded-lg border p-3", excede && "border-destructive bg-destructive/5")}>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium">{f.articulo_nombre}</p>
-                  <p className={cn("text-xs", excede ? "text-destructive" : "text-muted-foreground")}>
-                    Disponible en {origen === "deposito" ? "depósito" : "habitaciones"}: {f[origen]}
-                  </p>
-                </div>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  placeholder="0"
-                  value={cant[f.articulo_id] ?? ""}
-                  onChange={(e) => setCant({ ...cant, [f.articulo_id]: e.target.value })}
-                  className="h-11 w-24 text-center text-lg tabular-nums"
-                />
-              </div>
-            );
-          })}
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              enterKeyHint="search"
+              placeholder="Buscar artículo…"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="h-11 pl-9 pr-9"
+              aria-label="Buscar artículo"
+            />
+            {busqueda && (
+              <button
+                type="button"
+                aria-label="Limpiar búsqueda"
+                onClick={() => setBusqueda("")}
+                className="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-accent"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+
+          {visibles.arriba.length > 0 && (
+            <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-success">
+              En este remito · {visibles.arriba.length} artículo{visibles.arriba.length === 1 ? "" : "s"}
+            </p>
+          )}
+          {visibles.arriba.map(fila)}
+          {visibles.arriba.length > 0 && visibles.resto.length > 0 && (
+            <p className="pt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Otros artículos</p>
+          )}
+          {visibles.resto.map(fila)}
+          {visibles.resto.length === 0 && busqueda && (
+            <p className="py-4 text-center text-sm text-muted-foreground">No hay artículos que coincidan con “{busqueda}”.</p>
+          )}
         </CardContent>
       </Card>
 
