@@ -23,20 +23,27 @@ export function Notificaciones({ base }: { base: "/hotel" | "/lavadero" }) {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase
-      .from("notificaciones")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(20)
-      .then(({ data }) => setItems((data as Notif[]) ?? []));
+    let conocidas: Set<number> | null = null;
+
+    // Siempre se lee la tabla (respeta RLS): el aviso de Realtime sólo dispara la recarga.
+    // Así nunca se muestran filas vacías ni avisos destinados al otro rol.
+    const cargar = async (avisar: boolean) => {
+      const { data } = await supabase.from("notificaciones").select("*").order("created_at", { ascending: false }).limit(20);
+      const lista = ((data as Notif[]) ?? []).filter((n) => n.id && n.titulo);
+      if (avisar && conocidas) {
+        const nuevas = lista.filter((n) => !conocidas!.has(n.id));
+        nuevas.forEach((n) => toast(n.titulo, { description: n.mensaje ?? undefined }));
+        if (nuevas.length && "vibrate" in navigator) navigator.vibrate?.(200);
+      }
+      conocidas = new Set(lista.map((n) => n.id));
+      setItems(lista);
+    };
+    cargar(false);
 
     const ch = supabase
       .channel("notificaciones")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notificaciones" }, (p) => {
-        const n = p.new as Notif;
-        setItems((prev) => [n, ...prev].slice(0, 20));
-        toast(n.titulo, { description: n.mensaje ?? undefined });
-        if ("vibrate" in navigator) navigator.vibrate?.(200);
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notificaciones" }, () => {
+        cargar(true);
       })
       .subscribe();
     return () => {
@@ -82,9 +89,11 @@ export function Notificaciones({ base }: { base: "/hotel" | "/lavadero" }) {
                 >
                   <p className="text-sm font-medium">{n.titulo}</p>
                   {n.mensaje && <p className="text-xs text-muted-foreground">{n.mensaje}</p>}
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    {new Date(n.created_at).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}
-                  </p>
+                  {n.created_at && (
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {new Date(n.created_at).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}
+                    </p>
+                  )}
                 </Link>
               </li>
             ))}
