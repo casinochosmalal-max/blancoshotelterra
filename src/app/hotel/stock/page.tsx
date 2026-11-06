@@ -9,7 +9,7 @@ import { MinimoEditable } from "@/components/stock/minimo-editable";
 import { TransferenciaForm } from "@/components/stock/transferencia-form";
 import { UBICACIONES } from "@/components/remitos/constantes";
 import { fmtFecha } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { cn, conStockPrimero } from "@/lib/utils";
 import type { AlertaStock, Edificio, StockResumen, Ubicacion } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +33,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
       .order("created_at", { ascending: false })
       .limit(15),
   ]);
-  const filas = (stock ?? []) as StockResumen[];
+  const filas = conStockPrimero((stock ?? []) as StockResumen[]);
   const sum = (k: "habitaciones" | "deposito" | "lavadero" | "total") => filas.reduce((a, f) => a + f[k], 0);
 
   return (
