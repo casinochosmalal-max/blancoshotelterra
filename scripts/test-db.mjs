@@ -13,7 +13,7 @@ alter default privileges in schema public grant all on tables to anon, authentic
 alter default privileges in schema public grant all on sequences to anon, authenticated;
 grant usage on schema public to anon, authenticated;
 `);
-for (const f of ['0001_esquema.sql','0002_logica_negocio.sql','0003_rls.sql','0004_vistas.sql','0006_admin_usuarios.sql']) {
+for (const f of ['0001_esquema.sql','0002_logica_negocio.sql','0003_rls.sql','0004_vistas.sql','0006_admin_usuarios.sql','0007_pendientes_entrega.sql']) {
   try { await db.exec(fs.readFileSync(M+'migrations/'+f,'utf8')); console.log('OK', f); } catch(e) { console.log('FAIL', f, e.message); process.exit(1); }
 }
 await db.exec(fs.readFileSync(M+'seed.sql','utf8')); console.log('OK seed');
@@ -74,3 +74,45 @@ await as(H); await q(`select tipo, titulo from notificaciones`, 'notif hotel');
 await as(L); await q(`update perfiles set rol='hotel' where id='${L}'`, 'escalada (debe fallar)');
 await as(H); await q(`update perfiles set es_admin=true where id='${H}'`, 'auto-admin (debe fallar)');
 await q(`select es_admin()`, 'es_admin hotel (false)');
+
+// ---- 0007 · Pendientes de entrega -------------------------------------------
+console.log('\n--- pendientes de entrega ---');
+await as(H);
+const precio1 = (await q(`select precio_unitario_actual p from articulos where id=1`))[0].p;
+console.log('precio art1', precio1);
+let p1 = (await q(`insert into remitos_envio(edificio_id) values (2) returning id`))[0].id;
+await q(`insert into detalle_remito(remito_id, articulo_id, cantidad_enviada) values ('${p1}',1,10)`);
+await q(`select estado from enviar_remito('${p1}')`, 'P1 enviar');
+await as(L);
+await q(`select estado from recepcionar_remito('${p1}', '[]', 'f')`, 'P1 recepcion');
+await q(`select estado from despachar_remito('${p1}', '[{"articulo_id":1,"cantidad":8}]', 'f', '[{"articulo_id":1,"tipo":"mancha","responsable":"lavadero","cantidad":2,"descripcion":"relavar"}]')`, 'P1 despacho (retiene 2)');
+await q(`select id, remito_origen_codigo, articulo_id, cantidad, estado, motivo, precio_unitario from v_pendientes_entrega`, 'lavadero ve pendientes');
+await as(H);
+await q(`select estado from cerrar_remito('${p1}', '[]', 'f')`, 'P1 cierre');
+await q(`select importe, prendas_retenidas from v_remitos where id='${p1}'`, 'P1 importe (8 x precio)');
+await q(`select ubicacion, cantidad from stock_edificio where edificio_id=2 and articulo_id=1 order by 1`, 'stock T2 art1 tras P1');
+let p2 = (await q(`insert into remitos_envio(edificio_id) values (2) returning id`))[0].id;
+await q(`insert into detalle_remito(remito_id, articulo_id, cantidad_enviada) values ('${p2}',1,5)`);
+await q(`select estado from enviar_remito('${p2}')`, 'P2 enviar');
+await as(L);
+await q(`select estado from recepcionar_remito('${p2}', '[]', 'f')`, 'P2 recepcion');
+const pid = (await q(`select id from pendientes_entrega where estado='pendiente'`))[0].id;
+await q(`select estado from despachar_remito('${p2}', '[{"articulo_id":1,"cantidad":4}]', 'f', '[]', '[{"id":${pid},"cantidad":1}]')`, 'P2 despacho: 4 + 1 pendiente, retiene 1');
+await q(`select id, remito_origen_id='${p1}' as de_p1, cantidad, estado, remito_entrega_id='${p2}' as en_p2 from pendientes_entrega order by id`, 'pendientes tras P2 despacho');
+await q(`select * from despachar_remito('${p2}', '[]', 'f')`, 'doble despacho (falla)');
+await as(H);
+await q(`select estado from cerrar_remito('${p2}', '[]', 'f')`, 'P2 cierre (todo llegó)');
+await q(`select codigo, importe, prendas_retenidas, prendas_pendientes_incluidas from v_remitos where id in ('${p1}','${p2}') order by codigo`, 'importes P1 (8) / P2 (4+1=5)');
+await q(`select id, cantidad, estado from pendientes_entrega order by id`, 'pendientes tras cierre P2');
+await q(`select ubicacion, cantidad from stock_edificio where edificio_id=2 and articulo_id=1 order by 1`, 'stock T2 art1 (lavadero = 2 retenidas)');
+await q(`update articulos set costo_reposicion = 1000 where id = 1`);
+const perder = (await q(`select id from pendientes_entrega where estado='pendiente' and remito_origen_id='${p2}'`))[0].id;
+await q(`select estado from dar_pendiente_por_perdida(${perder}, 'lavadero', 'no apareció')`, 'perdida P2');
+await q(`select tipo, responsable, cantidad, estado, importe_cargo from observaciones where remito_id='${p2}'`, 'faltante con cargo');
+await q(`select ubicacion, cantidad from stock_edificio where edificio_id=2 and articulo_id=1 and ubicacion='lavadero'`, 'lavadero art1 (1)');
+await q(`select edificio_codigo, remitos, prendas, importe_lavado, cargos_lavadero, neto from v_liquidacion_mensual where edificio_codigo='B'`, 'liq T2');
+await as(L);
+await q(`select * from dar_pendiente_por_perdida(${pid}, 'hotel')`, 'lavadero no puede dar por perdida');
+await q(`select count(*) from pagos_recibidos()`, 'lavadero ve pagos');
+await q(`select count(*) from v_lineas_facturacion`, 'lavadero ve lineas');
+await q(`insert into pendientes_entrega(edificio_id, articulo_id, remito_origen_id, cantidad) values (2,1,'${p1}',5)`, 'insert directo (falla)');

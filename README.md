@@ -15,6 +15,7 @@ PWA (mobile-first y escritorio) para gestionar la ropa blanca de los dos edifici
    - `supabase/migrations/0003_rls.sql`: Row Level Security y privilegios por columna
    - `supabase/migrations/0004_vistas.sql`: vistas de stock, alertas, liquidación y cuenta corriente
    - `supabase/migrations/0005_storage.sql`: buckets `comprobantes` e `incidencias`
+   - `supabase/migrations/0006_admin_usuarios.sql` y `0007_pendientes_entrega.sql`
    - `supabase/seed.sql`: edificios A/B, artículos con precios y stock inicial (ajustar)
 3. **Usuarios**: en *Authentication > Users* crear los 3 usuarios (2 hotel y 1 lavadero), desactivar el registro público (*Auth > Providers > Email > Allow new users to sign up = off*) y asignar el rol con el SQL que está al final de `seed.sql`. El rol vive en `raw_app_meta_data`, que el usuario no puede modificar.
 4. **Variables de entorno**: copiar `.env.example` a `.env.local` y completar.
@@ -83,9 +84,10 @@ src/
 - **Precio histórico**: al cargar el detalle se copia `precio_unitario_actual` a `precio_unitario_historico`. Cada cambio de precio queda en `precios_historicos` con % de variación y motivo.
 - **Facturación**: se paga lo que el lavadero recibió y aceptó (`cantidad_recibida × precio histórico`), sólo de remitos cerrados.
 - **Roturas y faltantes**: al aprobarse dan de baja la prenda de "En lavadero". Si son **a cargo del lavadero**, generan un cargo de `cantidad × costo_reposicion` que se descuenta en la liquidación; si son **a cargo del hotel**, sólo se da de baja, sin cargo. Las que reporta el lavadero quedan pendientes de aprobación del hotel; las del hotel se aprueban solas.
+- **Prendas pendientes de entrega** (`0007_pendientes_entrega.sql`): si el lavadero despacha menos de lo recibido y no es rotura ni faltante (p. ej. una mancha que se relava), la diferencia queda pendiente. El lavadero la ve en *A entregar*, el hotel en *A recibir*, y en el próximo despacho de esa torre se suma al remito; el hotel la valida al cerrarlo. No se paga en el remito original sino en el que se entrega (al precio original). El hotel puede darla por perdida (faltante con o sin cargo).
 - **Stock de seguridad**: `stock_minimo` por edificio y artículo en el depósito; `v_alertas_stock` marca advertencia o crítica (por debajo de la mitad del mínimo o en cero).
 
-**Seguridad (RLS):** el hotel ve y gestiona todo. El lavadero sólo ve remitos ya enviados (de ambos edificios), su detalle y observaciones, y puede crear observaciones en recepción y despacho. No ve stock, pagos, precios históricos ni las vistas financieras. Los cambios de estado sólo se hacen por RPC, y los privilegios por columna impiden editar cantidades, estados o roles a mano.
+**Seguridad (RLS):** el hotel ve y gestiona todo. El lavadero sólo ve remitos ya enviados (de ambos edificios), su detalle, observaciones y pendientes, y puede crear observaciones en recepción y despacho. En *Resumen* ve sus montos por semana y mes (lavado, descuentos, pagos recibidos y saldo); no ve stock, precios históricos ni las vistas financieras del hotel. Los cambios de estado sólo se hacen por RPC, y los privilegios por columna impiden editar cantidades, estados o roles a mano.
 
 ---
 

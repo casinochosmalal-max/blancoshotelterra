@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { mensajes, notificarWhatsApp } from "@/lib/whatsapp";
-import type { ItemConteo, ObservacionInput, RemitoVista } from "@/types/database";
+import type { ItemConteo, ItemPendiente, ObservacionInput, RemitoVista, Responsable } from "@/types/database";
 
 export type Resultado<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -132,6 +132,7 @@ export async function despacharRemito(
   items: ItemConteo[],
   firma: string,
   observaciones: ObservacionInput[],
+  pendientes: ItemPendiente[] = [],
 ): Promise<Resultado> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("despachar_remito", {
@@ -139,6 +140,7 @@ export async function despacharRemito(
     p_items: items,
     p_firma: firma,
     p_observaciones: observaciones,
+    p_pendientes: pendientes,
   });
   if (error) return fallo(error);
 
@@ -161,6 +163,7 @@ export async function cerrarRemito(
   items: ItemConteo[],
   firma: string,
   observaciones: ObservacionInput[],
+  pendientes: ItemPendiente[] = [],
 ): Promise<Resultado> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("cerrar_remito", {
@@ -168,9 +171,20 @@ export async function cerrarRemito(
     p_items: items,
     p_firma: firma,
     p_observaciones: observaciones,
+    p_pendientes: pendientes,
   });
   if (error) return fallo(error);
   refrescar(id);
+  return { ok: true };
+}
+
+// --- Prendas pendientes de entrega ------------------------------------------
+
+export async function darPendientePorPerdida(id: number, responsable: Responsable, nota?: string): Promise<Resultado> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("dar_pendiente_por_perdida", { p_id: id, p_responsable: responsable, p_nota: nota ?? null });
+  if (error) return fallo(error);
+  refrescar();
   return { ok: true };
 }
 

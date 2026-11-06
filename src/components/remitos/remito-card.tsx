@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Building2, AlertTriangle } from "lucide-react";
+import { ChevronRight, Building2, AlertTriangle, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { fmtFecha } from "@/lib/format";
 import type { RemitoVista } from "@/types/database";
@@ -23,6 +23,11 @@ export function RemitoCard({ r, href, accion }: { r: RemitoVista; href: string; 
           {r.observaciones_pendientes > 0 && (
             <p className="flex items-center gap-1 text-xs text-warning-foreground">
               <AlertTriangle className="size-3" /> {r.observaciones_pendientes} observación(es) pendiente(s)
+            </p>
+          )}
+          {(r.prendas_retenidas ?? 0) > 0 && (
+            <p className="flex items-center gap-1 text-xs text-warning-foreground">
+              <Clock className="size-3" /> {r.prendas_retenidas} prenda(s) pendiente(s) de entrega
             </p>
           )}
           {accion && <p className="text-xs font-medium text-primary">{accion}</p>}

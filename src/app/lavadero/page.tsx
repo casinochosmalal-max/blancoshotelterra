@@ -1,6 +1,8 @@
 import { Inbox, Shirt, Truck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { RemitoCard } from "@/components/remitos/remito-card";
+import { ListaPendientes } from "@/components/remitos/pendientes";
+import { cargarPendientesAbiertas } from "@/lib/queries";
 import type { RemitoVista } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +17,7 @@ export default async function LavaderoInicio() {
     .order("nro_envio_dia", { ascending: false })
     .limit(60);
   const remitos = (data ?? []) as RemitoVista[];
+  const pendientes = await cargarPendientesAbiertas();
 
   const secciones = [
     { titulo: "Por recibir", icono: Inbox, estados: ["enviado"], accion: "Tocar para contar y firmar" },
@@ -26,6 +29,7 @@ export default async function LavaderoInicio() {
 
   return (
     <div className="space-y-6">
+      <ListaPendientes pendientes={pendientes} titulo="A entregar" base="/lavadero" />
       {secciones.map((s) => {
         const lista = remitos.filter((r) => (s.estados as readonly string[]).includes(r.estado));
         return (

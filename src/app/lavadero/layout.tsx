@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, LogOut, ScanLine } from "lucide-react";
+import { BarChart3, ClipboardList, LogOut, ScanLine } from "lucide-react";
 import { requireRol } from "@/lib/auth";
 import { logout } from "@/app/login/actions";
 import { Notificaciones } from "@/components/layout/notificaciones";
@@ -36,12 +36,15 @@ export default async function LavaderoLayout({ children }: { children: React.Rea
       </header>
       <div className="guarda" aria-hidden />
       <main className="mx-auto max-w-2xl p-4 pb-24">{children}</main>
-      <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 grid grid-cols-2 border-t bg-background">
+      <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t bg-background">
         <Link href="/lavadero" className="flex flex-col items-center gap-0.5 py-2 text-xs">
           <ClipboardList className="size-5" /> Remitos
         </Link>
         <Link href="/lavadero/escanear" className="flex flex-col items-center gap-0.5 py-2 text-xs">
           <ScanLine className="size-5" /> Escanear QR
+        </Link>
+        <Link href="/lavadero/resumen" className="flex flex-col items-center gap-0.5 py-2 text-xs">
+          <BarChart3 className="size-5" /> Resumen
         </Link>
       </nav>
       <RealtimeRefresh canal="lavadero-remitos" tablas={TABLAS} />

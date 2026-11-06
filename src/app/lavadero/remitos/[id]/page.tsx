@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { cargarRemito } from "@/lib/queries";
+import { cargarPendientesRemito, cargarRemito } from "@/lib/queries";
+import { PendientesDelRemito } from "@/components/remitos/pendientes";
 import { Card } from "@/components/ui/card";
 import { ConteoRemito } from "@/components/remitos/conteo-remito";
 import { EstadoBadge, PasosRemito } from "@/components/remitos/estado-badge";
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function RemitoLavadero({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { remito, detalle, observaciones } = await cargarRemito(id);
+  const pend = await cargarPendientesRemito(remito);
   const editable = remito.estado === "enviado" || remito.estado === "recibido";
 
   return (
@@ -43,7 +45,14 @@ export default async function RemitoLavadero({ params }: { params: Promise<{ id:
         <ConteoRemito remito={remito} detalle={detalle} etapa="recepcion" volverA="/lavadero" />
       )}
       {remito.estado === "recibido" && (
-        <ConteoRemito remito={remito} detalle={detalle} etapa="despacho" observacionesPrevias={observaciones} volverA="/lavadero" />
+        <ConteoRemito
+          remito={remito}
+          detalle={detalle}
+          etapa="despacho"
+          observacionesPrevias={observaciones}
+          pendientes={pend.disponibles}
+          volverA="/lavadero"
+        />
       )}
 
       {!editable && (
@@ -51,6 +60,7 @@ export default async function RemitoLavadero({ params }: { params: Promise<{ id:
           <Card className="p-2">
             <TablaDetalle detalle={detalle} />
           </Card>
+          <PendientesDelRemito retenidas={pend.retenidas} incluidas={[...pend.enCamino, ...pend.incluidas]} base="/lavadero" />
           <BotonPDF remito={remito} detalle={detalle} observaciones={observaciones} className="w-full" size="lg" />
         </>
       )}

@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { AlertasStock } from "@/components/stock/alertas-stock";
 import { RemitoCard } from "@/components/remitos/remito-card";
+import { ListaPendientes } from "@/components/remitos/pendientes";
+import { cargarPendientesAbiertas } from "@/lib/queries";
 import { fmtMoneda, fmtNumero, inicioMes } from "@/lib/format";
 import type { AlertaStock, ConciliacionMensual, RemitoVista, StockResumen } from "@/types/database";
 
@@ -22,6 +24,7 @@ export default async function HotelDashboard() {
     supabase.from("v_conciliacion_mensual").select("*").order("periodo", { ascending: false }),
   ]);
 
+  const pendientes = await cargarPendientesAbiertas();
   const s = (stock ?? []) as StockResumen[];
   const total = (k: "deposito" | "lavadero" | "habitaciones") => s.reduce((a, r) => a + r[k], 0);
   const mes = ((conc ?? []) as ConciliacionMensual[]).find((c) => c.periodo.slice(0, 10) === inicioMes());
@@ -76,7 +79,10 @@ export default async function HotelDashboard() {
             ))}
           </CardContent>
         </Card>
-        <AlertasStock alertas={(alertas ?? []) as AlertaStock[]} compacto />
+        <div className="space-y-6">
+          <ListaPendientes pendientes={pendientes} titulo="A recibir del lavadero" base="/hotel" hotel />
+          <AlertasStock alertas={(alertas ?? []) as AlertaStock[]} compacto />
+        </div>
       </div>
     </>
   );

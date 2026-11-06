@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { cargarRemito } from "@/lib/queries";
+import { cargarPendientesRemito, cargarRemito } from "@/lib/queries";
+import { PendientesDelRemito } from "@/components/remitos/pendientes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EstadoBadge, PasosRemito } from "@/components/remitos/estado-badge";
 import { ListaObservaciones, TablaDetalle } from "@/components/remitos/detalle-remito";
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function RemitoHotel({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { remito, detalle, observaciones } = await cargarRemito(id);
+  const pend = await cargarPendientesRemito(remito);
   const cargos = observaciones.filter((o) => o.estado === "aprobada").reduce((s, o) => s + Number(o.importe_cargo), 0);
 
   const hitos = [
@@ -61,7 +63,14 @@ export default async function RemitoHotel({ params }: { params: Promise<{ id: st
       {remito.estado === "despachado" ? (
         <div className="mx-auto max-w-2xl">
           <h2 className="mb-2 font-semibold">Paso C · Validá el ingreso al depósito central</h2>
-          <ConteoRemito remito={remito} detalle={detalle} etapa="validacion" observacionesPrevias={observaciones} volverA="/hotel" />
+          <ConteoRemito
+            remito={remito}
+            detalle={detalle}
+            etapa="validacion"
+            observacionesPrevias={observaciones}
+            pendientes={pend.enCamino}
+            volverA="/hotel"
+          />
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -108,6 +117,10 @@ export default async function RemitoHotel({ params }: { params: Promise<{ id: st
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {remito.estado !== "despachado" && (
+        <PendientesDelRemito retenidas={pend.retenidas} incluidas={[...pend.enCamino, ...pend.incluidas]} base="/hotel" />
       )}
 
       <section className="space-y-2">

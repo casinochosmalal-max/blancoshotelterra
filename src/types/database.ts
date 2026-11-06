@@ -120,6 +120,36 @@ export interface RemitoVista extends Remito {
   prendas_validadas: number | null;
   importe: number;
   observaciones_pendientes: number;
+  prendas_retenidas?: number;
+  prendas_pendientes_incluidas?: number;
+}
+
+export type EstadoPendiente = "pendiente" | "en_camino" | "entregada" | "perdida";
+
+/** Prendas que el lavadero retuvo en un despacho y entrega en un remito posterior. */
+export interface PendienteEntrega {
+  id: number;
+  edificio_id: number;
+  articulo_id: number;
+  remito_origen_id: string;
+  cantidad: number;
+  motivo: string | null;
+  precio_unitario: number;
+  estado: EstadoPendiente;
+  remito_entrega_id: string | null;
+  created_at: string;
+  entregada_at: string | null;
+  edificio_nombre: string;
+  articulo_nombre: string;
+  articulo_orden: number;
+  remito_origen_codigo: string;
+  remito_origen_fecha: string;
+  remito_entrega_codigo: string | null;
+}
+
+export interface ItemPendiente {
+  id: number;
+  cantidad: number;
 }
 
 export interface DetalleRemito {

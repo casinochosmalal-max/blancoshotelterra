@@ -1,14 +1,23 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCheck, CheckCircle2, Loader2, Minus, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { AlertTriangle, CheckCheck, CheckCircle2, Clock, Loader2, Minus, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { cerrarRemito, despacharRemito, recepcionarRemito } from "@/app/actions/remitos";
-import type { DetalleRemito, Etapa, Observacion, ObservacionInput, RemitoVista, Responsable, TipoObservacion } from "@/types/database";
+import type {
+  DetalleRemito,
+  Etapa,
+  Observacion,
+  ObservacionInput,
+  PendienteEntrega,
+  RemitoVista,
+  Responsable,
+  TipoObservacion,
+} from "@/types/database";
 import { FirmaDigital } from "./firma-digital";
 import { TIPOS_OBS } from "./constantes";
 
@@ -58,12 +67,15 @@ export function ConteoRemito({
   detalle,
   etapa,
   observacionesPrevias = [],
+  pendientes = [],
   volverA,
 }: {
   remito: RemitoVista;
   detalle: DetalleRemito[];
   etapa: Etapa;
   observacionesPrevias?: Observacion[];
+  /** Despacho: pendientes de la torre que se pueden sumar. Validación: las que vienen en este remito. */
+  pendientes?: PendienteEntrega[];
   volverA: string;
 }) {
   const router = useRouter();
@@ -80,6 +92,11 @@ export function ConteoRemito({
   const [revisado, setRevisado] = useState<Record<number, boolean>>({});
   const [obs, setObs] = useState<ObservacionInput[]>([]);
   const [firma, setFirma] = useState<string | null>(null);
+  // Despacho: el lavadero elige cuántas suma (arranca en 0). Validación: el hotel confirma lo que llegó (arranca completo).
+  const [pend, setPend] = useState<Record<number, number>>(() =>
+    Object.fromEntries(pendientes.map((p) => [p.id, etapa === "validacion" ? p.cantidad : 0])),
+  );
+  const totalPend = pendientes.reduce((s, p) => s + (pend[p.id] ?? 0), 0);
   const [pending, startTransition] = useTransition();
 
   const valor = (id: number, def: number) => conteo[id] ?? def;
@@ -102,7 +119,16 @@ export function ConteoRemito({
     if (!firma) return toast.error("Falta la firma");
     if (revisados < filas.length && !confirm("Hay artículos sin revisar. Se tomará la cantidad esperada. ¿Continuar?")) return;
     const sinExplicar = diferencias.filter((f) => !obs.some((o) => o.articulo_id === f.articulo_id));
-    if (
+    if (etapa === "despacho") {
+      // Lo que no se despacha y no es rotura ni faltante queda pendiente de entrega.
+      const bajas = (id: number) =>
+        obs.filter((o) => o.articulo_id === id && (o.tipo === "rotura" || o.tipo === "faltante")).reduce((s, o) => s + o.cantidad, 0);
+      const retenidas = diferencias.reduce(
+        (s, f) => s + Math.max(f.esperado - valor(f.articulo_id, f.esperado) - bajas(f.articulo_id), 0),
+        0,
+      );
+      if (retenidas > 0 && !confirm(`${retenidas} prenda(s) quedan en el lavadero como pendientes de entrega. ¿Continuar?`)) return;
+    } else if (
       sinExplicar.length &&
       !confirm(
         `Hay ${sinExplicar.length} diferencia(s) sin observación. Se registrarán automáticamente como faltante/sobrante para que el hotel las revise. ¿Continuar?`,
@@ -111,9 +137,16 @@ export function ConteoRemito({
       return;
 
     const items = filas.map((f) => ({ articulo_id: f.articulo_id, cantidad: valor(f.articulo_id, f.esperado) }));
-    const accion = etapa === "recepcion" ? recepcionarRemito : etapa === "despacho" ? despacharRemito : cerrarRemito;
+    const itemsPend = pendientes
+      .map((p) => ({ id: p.id, cantidad: pend[p.id] ?? 0 }))
+      .filter((p) => etapa === "validacion" || p.cantidad > 0);
     startTransition(async () => {
-      const r = await accion(remito.id, items, firma, obs);
+      const r =
+        etapa === "recepcion"
+          ? await recepcionarRemito(remito.id, items, firma, obs)
+          : etapa === "despacho"
+            ? await despacharRemito(remito.id, items, firma, obs, itemsPend)
+            : await cerrarRemito(remito.id, items, firma, obs, itemsPend);
       if (!r.ok) return void toast.error(r.error);
       toast.success(t.exito);
       router.push(volverA);
@@ -214,6 +247,57 @@ export function ConteoRemito({
         })}
       </ul>
 
+      {pendientes.length > 0 && etapa !== "recepcion" && (
+        <Card className="space-y-3 border-primary/40 p-4">
+          <div>
+            <p className="flex items-center gap-2 font-semibold">
+              <Clock className="size-4" />
+              {etapa === "despacho" ? "Prendas pendientes de envíos anteriores" : "Prendas pendientes que vienen en este remito"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {etapa === "despacho"
+                ? "Indicá cuántas entregás ahora. Las que no sumes siguen pendientes."
+                : "Confirmá cuántas llegaron. Las que no lleguen vuelven a quedar pendientes."}
+            </p>
+          </div>
+          <ul className="space-y-2">
+            {pendientes.map((p) => {
+              const v = pend[p.id] ?? 0;
+              const fijar = (n: number) => setPend((x) => ({ ...x, [p.id]: Math.min(Math.max(n, 0), p.cantidad) }));
+              return (
+                <li key={p.id} className={cn("flex items-center gap-2 rounded-lg border p-3", v > 0 && "border-success/50 bg-success/5")}>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">
+                      {p.articulo_nombre} <span className="text-muted-foreground">· {p.cantidad} pend.</span>
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      De {p.remito_origen_codigo}
+                      {p.motivo ? ` · ${p.motivo}` : ""}
+                    </p>
+                  </div>
+                  <Button type="button" variant="outline" size="icon" aria-label="Restar" onClick={() => fijar(v - 1)}>
+                    <Minus />
+                  </Button>
+                  <span className="w-8 text-center text-lg font-semibold tabular-nums">{v}</span>
+                  <Button type="button" variant="outline" size="icon" aria-label="Sumar" onClick={() => fijar(v + 1)}>
+                    <Plus />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={v === p.cantidad ? "success" : "secondary"}
+                    size="icon"
+                    aria-label="Todas"
+                    onClick={() => fijar(v === p.cantidad ? 0 : p.cantidad)}
+                  >
+                    <CheckCheck />
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
+
       <EditorObservaciones
         articulos={filas.map((f) => ({ id: f.articulo_id, nombre: f.articulos?.nombre ?? "" }))}
         observaciones={obs}
@@ -238,6 +322,7 @@ export function ConteoRemito({
             <p className="font-semibold tabular-nums">
               {totalContado} / {totalEsperado}
             </p>
+            {totalPend > 0 && <p className="text-xs text-primary">+{totalPend} pendientes</p>}
           </div>
           <Button size="xl" className="flex-1" onClick={enviar} disabled={pending || !firma}>
             {pending ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
