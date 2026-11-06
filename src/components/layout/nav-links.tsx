@@ -9,6 +9,7 @@ import {
   MessageSquareWarning,
   ScanLine,
   Tags,
+  UsersRound,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -23,6 +24,7 @@ const ICONOS: Record<string, LucideIcon> = {
   precios: Tags,
   movimientos: ArrowLeftRight,
   escanear: ScanLine,
+  usuarios: UsersRound,
 };
 
 export interface NavItem {

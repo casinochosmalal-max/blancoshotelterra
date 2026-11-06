@@ -23,6 +23,7 @@ export default async function HotelLayout({ children }: { children: React.ReactN
     { href: "/hotel/observaciones", label: "Observaciones", icono: "observaciones", badge: obsPendientes ?? 0 },
     { href: "/hotel/finanzas", label: "Finanzas", icono: "finanzas", movil: true },
     { href: "/hotel/precios", label: "Precios", icono: "precios", movil: true },
+    ...(perfil.es_admin ? [{ href: "/hotel/usuarios", label: "Usuarios", icono: "usuarios" } as NavItem] : []),
   ];
 
   return (

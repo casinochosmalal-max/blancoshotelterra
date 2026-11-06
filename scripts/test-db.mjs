@@ -13,7 +13,7 @@ alter default privileges in schema public grant all on tables to anon, authentic
 alter default privileges in schema public grant all on sequences to anon, authenticated;
 grant usage on schema public to anon, authenticated;
 `);
-for (const f of ['0001_esquema.sql','0002_logica_negocio.sql','0003_rls.sql','0004_vistas.sql']) {
+for (const f of ['0001_esquema.sql','0002_logica_negocio.sql','0003_rls.sql','0004_vistas.sql','0006_admin_usuarios.sql']) {
   try { await db.exec(fs.readFileSync(M+'migrations/'+f,'utf8')); console.log('OK', f); } catch(e) { console.log('FAIL', f, e.message); process.exit(1); }
 }
 await db.exec(fs.readFileSync(M+'seed.sql','utf8')); console.log('OK seed');
@@ -72,3 +72,5 @@ await as(X); await q(`select count(*) from remitos_envio`, 'sin rol (0)'); await
 await as(L); await q(`select count(*), rol_destino from notificaciones group by 2`, 'notif lavadero');
 await as(H); await q(`select tipo, titulo from notificaciones`, 'notif hotel');
 await as(L); await q(`update perfiles set rol='hotel' where id='${L}'`, 'escalada (debe fallar)');
+await as(H); await q(`update perfiles set es_admin=true where id='${H}'`, 'auto-admin (debe fallar)');
+await q(`select es_admin()`, 'es_admin hotel (false)');

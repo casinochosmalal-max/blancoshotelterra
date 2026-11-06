@@ -15,6 +15,19 @@ export interface Perfil {
   rol: Rol | null;
   telefono_whatsapp: string | null;
   activo: boolean;
+  es_admin?: boolean;
+}
+
+export interface UsuarioAdmin {
+  id: string;
+  email: string;
+  nombre: string;
+  rol: Rol | null;
+  telefono_whatsapp: string | null;
+  activo: boolean;
+  es_admin: boolean;
+  ultimo_ingreso: string | null;
+  creado: string;
 }
 
 export interface Edificio {

@@ -111,3 +111,11 @@ Además hay notificaciones dentro de la app (tabla `notificaciones` + Supabase R
 - `manifest.webmanifest` + service worker (`public/sw.js`): instalable en Android/iOS, página offline. No cachea datos para no mostrar stock viejo.
 - Cada remito tiene un QR que apunta a `/r/{id}` y abre la pantalla correcta según quién lo escanee. El lavadero puede escanearlo desde *Escanear QR*.
 - **PDF**: botón en cada remito que genera un A4 con detalle, observaciones, las tres firmas y el QR. La liquidación mensual se imprime o guarda como PDF desde el navegador.
+
+---
+
+## Administración de usuarios
+
+La pantalla **Usuarios** (menú del hotel) sólo aparece para perfiles con `es_admin = true`; la migración `0006_admin_usuarios.sql` se lo asigna a casinochosmalal@gmail.com. Permite crear usuarios (con rol y contraseña inicial), editar nombre, email, rol y WhatsApp, cambiar contraseñas, desactivar/reactivar (bloquea el ingreso sin borrar historial) y eliminar.
+
+Necesita la variable `SUPABASE_SERVICE_ROLE_KEY` (Secret key de Supabase) en Vercel. Esa clave sólo se usa en el servidor y después de verificar que quien llama es administrador.

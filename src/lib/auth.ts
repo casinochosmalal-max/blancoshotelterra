@@ -26,3 +26,10 @@ export async function requireRol(rol: Rol): Promise<Perfil> {
 export function inicioDeRol(rol: Rol) {
   return rol === "hotel" ? "/hotel" : "/lavadero";
 }
+
+/** Exige que el usuario sea administrador de usuarios. */
+export async function requireAdmin(): Promise<Perfil> {
+  const perfil = await getPerfil();
+  if (!perfil.es_admin) redirect(inicioDeRol(perfil.rol!));
+  return perfil;
+}
