@@ -4,15 +4,15 @@ import { RegistrarServiceWorker } from "@/components/layout/registrar-sw";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Lavandería · Terra Blancos", template: "%s · Lavandería Terra Blancos" },
+  title: { default: "Lavandería · Terra Malal", template: "%s · Lavandería Terra Malal" },
   description: "Gestión de ropa blanca, remitos de lavadero y liquidaciones del hotel.",
-  applicationName: "Lavandería TB",
-  appleWebApp: { capable: true, title: "Lavandería TB", statusBarStyle: "default" },
+  applicationName: "Lavandería TM",
+  appleWebApp: { capable: true, title: "Lavandería TM", statusBarStyle: "default" },
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0c6b96",
+  themeColor: "#5e2f25",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

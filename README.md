@@ -1,4 +1,4 @@
-# Lavandería · Hotel Terra Blancos
+# Lavandería · Hotel Terra Malal
 
 PWA (mobile-first y escritorio) para gestionar la ropa blanca de los dos edificios del hotel: stock por ubicación, remitos de envío al lavadero con conteo y firma táctil, roturas y faltantes, liquidación mensual y pagos.
 

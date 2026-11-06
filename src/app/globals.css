@@ -4,49 +4,54 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
+    /* Paleta Terra Malal: marrón tierra, arena y crema (tomada de terramalal.com) */
+    --background: 36 38% 97%;
+    --foreground: 20 18% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --primary: 199 89% 32%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 30% 94%;
-    --secondary-foreground: 222 47% 15%;
-    --muted: 210 30% 95%;
-    --muted-foreground: 215 16% 45%;
-    --accent: 199 60% 94%;
-    --accent-foreground: 199 89% 22%;
-    --destructive: 0 72% 48%;
+    --card-foreground: 20 18% 12%;
+    --primary: 11 44% 26%;
+    --primary-foreground: 36 40% 98%;
+    --secondary: 34 26% 91%;
+    --secondary-foreground: 28 22% 22%;
+    --muted: 34 24% 93%;
+    --muted-foreground: 25 12% 40%;
+    --accent: 32 38% 91%;
+    --accent-foreground: 11 44% 24%;
+    --sand: 30 18% 25%;
+    --gold: 40 22% 53%;
+    --destructive: 0 70% 45%;
     --destructive-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
-    --warning-foreground: 26 90% 30%;
-    --success: 152 65% 33%;
+    --warning-foreground: 26 90% 28%;
+    --success: 145 50% 30%;
     --success-foreground: 0 0% 100%;
-    --border: 214 25% 88%;
-    --input: 214 25% 85%;
-    --ring: 199 89% 40%;
-    --radius: 0.6rem;
+    --border: 30 20% 86%;
+    --input: 30 18% 82%;
+    --ring: 11 44% 36%;
+    --radius: 0.5rem;
   }
   .dark {
-    --background: 222 40% 8%;
-    --foreground: 210 30% 96%;
-    --card: 222 35% 11%;
-    --card-foreground: 210 30% 96%;
-    --primary: 199 85% 55%;
-    --primary-foreground: 222 47% 8%;
-    --secondary: 222 25% 18%;
-    --secondary-foreground: 210 30% 96%;
-    --muted: 222 25% 16%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 222 25% 18%;
-    --accent-foreground: 210 30% 96%;
-    --destructive: 0 70% 55%;
+    --background: 20 16% 8%;
+    --foreground: 34 30% 94%;
+    --card: 20 14% 11%;
+    --card-foreground: 34 30% 94%;
+    --primary: 14 50% 62%;
+    --primary-foreground: 20 30% 8%;
+    --secondary: 24 12% 18%;
+    --secondary-foreground: 34 30% 94%;
+    --muted: 24 12% 16%;
+    --muted-foreground: 30 12% 66%;
+    --accent: 24 14% 18%;
+    --accent-foreground: 34 30% 94%;
+    --sand: 34 18% 70%;
+    --gold: 40 26% 60%;
+    --destructive: 0 70% 58%;
     --warning: 38 92% 55%;
     --warning-foreground: 38 95% 70%;
-    --success: 152 55% 45%;
-    --border: 222 20% 22%;
-    --input: 222 20% 25%;
-    --ring: 199 85% 55%;
+    --success: 145 45% 45%;
+    --border: 24 12% 22%;
+    --input: 24 12% 26%;
+    --ring: 14 50% 62%;
   }
   * { @apply border-border; }
   body {
@@ -59,3 +64,16 @@
 }
 
 .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0.75rem); }
+
+/* Guarda de rombos inspirada en el logo de Terra Malal */
+.guarda {
+  height: 6px;
+  background-image:
+    linear-gradient(135deg, hsl(var(--gold)) 25%, transparent 25%),
+    linear-gradient(225deg, hsl(var(--gold)) 25%, transparent 25%),
+    linear-gradient(315deg, hsl(var(--gold)) 25%, transparent 25%),
+    linear-gradient(45deg, hsl(var(--gold)) 25%, transparent 25%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+  opacity: 0.55;
+}

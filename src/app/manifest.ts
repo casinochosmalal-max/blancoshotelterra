@@ -2,15 +2,15 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Lavandería · Hotel Terra Blancos",
-    short_name: "Lavandería TB",
+    name: "Lavandería · Terra Malal",
+    short_name: "Lavandería TM",
     description: "Remitos de lavadero, stock de ropa blanca y liquidaciones.",
     start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#f8fafc",
-    theme_color: "#0c6b96",
+    background_color: "#faf6f0",
+    theme_color: "#5e2f25",
     lang: "es-AR",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
