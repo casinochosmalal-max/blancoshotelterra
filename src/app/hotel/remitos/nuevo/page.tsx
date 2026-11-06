@@ -13,14 +13,25 @@ export default async function NuevoRemito() {
     supabase.from("v_stock_resumen").select("*").order("orden"),
     supabase.rpc("hoy"),
   ]);
-  const { data: delDia } = await supabase.from("remitos_envio").select("edificio_id").eq("fecha", hoy as string).neq("estado", "anulado");
-  const enviosHoy: Record<number, number> = {};
-  (delDia ?? []).forEach((r) => (enviosHoy[r.edificio_id] = (enviosHoy[r.edificio_id] ?? 0) + 1));
+  const { data: inicioStock } = await supabase.rpc("fecha_inicio_stock");
+  // Envíos por edificio y fecha de los últimos 120 días (para cargar remitos atrasados).
+  const desde = new Date(`${hoy as string}T12:00:00`);
+  desde.setDate(desde.getDate() - 120);
+  const { data: recientes } = await supabase
+    .from("remitos_envio")
+    .select("edificio_id, fecha")
+    .gte("fecha", desde.toISOString().slice(0, 10))
+    .neq("estado", "anulado");
+  const envios: Record<string, number> = {};
+  (recientes ?? []).forEach((r) => {
+    const k = `${r.edificio_id}|${r.fecha}`;
+    envios[k] = (envios[k] ?? 0) + 1;
+  });
 
   return (
     <>
       <PageHeader titulo="Nuevo remito de envío" descripcion="Paso A · Preparación y envío al lavadero" />
-      <NuevoRemitoForm edificios={(edificios ?? []) as Edificio[]} stock={(stock ?? []) as StockResumen[]} enviosHoy={enviosHoy} />
+      <NuevoRemitoForm edificios={(edificios ?? []) as Edificio[]} stock={(stock ?? []) as StockResumen[]} envios={envios} hoy={hoy as string} inicioStock={(inicioStock as string | null) ?? null} />
     </>
   );
 }

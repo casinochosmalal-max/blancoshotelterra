@@ -13,17 +13,28 @@ import type { Edificio, StockResumen } from "@/types/database";
 export function NuevoRemitoForm({
   edificios,
   stock,
-  enviosHoy,
+  envios,
+  hoy,
+  inicioStock,
 }: {
   edificios: Edificio[];
   stock: StockResumen[];
-  enviosHoy: Record<number, number>;
+  /** Envíos no anulados por "edificio|YYYY-MM-DD". */
+  envios: Record<string, number>;
+  hoy: string;
+  /** Fecha del conteo inicial: los envíos anteriores no mueven stock. */
+  inicioStock: string | null;
 }) {
   const router = useRouter();
   const [edificioId, setEdificioId] = useState(edificios[0]?.id);
   const [origen, setOrigen] = useState<"deposito" | "habitaciones">("deposito");
   const [cant, setCant] = useState<Record<number, string>>({});
   const [notas, setNotas] = useState("");
+  const [fecha, setFecha] = useState(hoy);
+  const enviosDe = (id: number) => envios[`${id}|${fecha}`] ?? 0;
+  const esHoy = fecha === hoy;
+  const fechaTxt = new Date(`${fecha}T12:00:00`).toLocaleDateString("es-AR");
+  const historico = !!inicioStock && fecha < inicioStock;
   const [pending, start] = useTransition();
 
   // Primero los artículos con stock en depósito o habitaciones; dentro de cada grupo, el orden del maestro.
@@ -34,14 +45,15 @@ export function NuevoRemitoForm({
       .sort((a, b) => conStock(a) - conStock(b) || a.orden - b.orden);
   }, [stock, edificioId]);
   const total = filas.reduce((a, f) => a + (Number(cant[f.articulo_id]) || 0), 0);
-  const excedidos = filas.filter((f) => (Number(cant[f.articulo_id]) || 0) > f[origen]);
-  const cupo = 2 - (enviosHoy[edificioId] ?? 0);
+  const excedidos = historico ? [] : filas.filter((f) => (Number(cant[f.articulo_id]) || 0) > f[origen]);
+  const cupo = 2 - enviosDe(edificioId);
 
   const guardar = (enviar: boolean) =>
     start(async () => {
       const r = await crearRemito({
         edificio_id: edificioId,
         ubicacion_origen: origen,
+        fecha,
         notas,
         enviar,
         items: filas.map((f) => ({ articulo_id: f.articulo_id, cantidad: Number(cant[f.articulo_id]) || 0 })),
@@ -68,10 +80,28 @@ export function NuevoRemitoForm({
               >
                 <p className="text-lg font-semibold">{e.nombre}</p>
                 <p className="text-xs text-muted-foreground">
-                  {enviosHoy[e.id] ?? 0} de 2 envíos hoy
+                  {enviosDe(e.id)} de 2 envíos {esHoy ? "hoy" : `el ${fechaTxt}`}
                 </p>
               </button>
             ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <Label htmlFor="fecha" className="text-muted-foreground">
+              Fecha del envío:
+            </Label>
+            <Input
+              id="fecha"
+              type="date"
+              value={fecha}
+              max={hoy}
+              onChange={(e) => setFecha(e.target.value || hoy)}
+              className="h-9 w-44"
+            />
+            {!esHoy && (
+              <span className="text-xs text-warning-foreground">
+                Carga de un envío atrasado{historico ? " · anterior al conteo inicial, no mueve stock" : ""}
+              </span>
+            )}
           </div>
           <div className="flex gap-2 text-sm">
             <span className="self-center text-muted-foreground">Sale de:</span>
@@ -85,7 +115,7 @@ export function NuevoRemitoForm({
         <CardContent className="space-y-2">
           {filas.map((f) => {
             const v = Number(cant[f.articulo_id]) || 0;
-            const excede = v > f[origen];
+            const excede = !historico && v > f[origen];
             return (
               <div key={f.articulo_id} className={cn("flex items-center gap-3 rounded-lg border p-3", excede && "border-destructive bg-destructive/5")}>
                 <div className="min-w-0 flex-1">
@@ -122,12 +152,15 @@ export function NuevoRemitoForm({
               <Label htmlFor="notas">Notas para el lavadero</Label>
               <Textarea id="notas" value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Ej.: retirar antes de las 11 h" />
             </div>
-            {cupo <= 0 && <p className="text-sm text-destructive">Este edificio ya tiene 2 envíos hoy.</p>}
+            {cupo <= 0 && (
+              <p className="text-sm text-destructive">Este edificio ya tiene 2 envíos {esHoy ? "hoy" : `el ${fechaTxt}`}.</p>
+            )}
+            {fecha > hoy && <p className="text-sm text-destructive">La fecha no puede ser futura.</p>}
             {excedidos.length > 0 && <p className="text-sm text-destructive">Hay cantidades mayores al stock disponible.</p>}
-            <Button className="w-full" size="lg" disabled={pending || total === 0 || cupo <= 0 || excedidos.length > 0} onClick={() => guardar(true)}>
+            <Button className="w-full" size="lg" disabled={pending || total === 0 || cupo <= 0 || fecha > hoy || excedidos.length > 0} onClick={() => guardar(true)}>
               {pending ? <Loader2 className="animate-spin" /> : <Send />} Enviar al lavadero
             </Button>
-            <Button className="w-full" variant="outline" disabled={pending || total === 0 || cupo <= 0} onClick={() => guardar(false)}>
+            <Button className="w-full" variant="outline" disabled={pending || total === 0 || cupo <= 0 || fecha > hoy} onClick={() => guardar(false)}>
               <Save /> Guardar borrador
             </Button>
           </CardContent>

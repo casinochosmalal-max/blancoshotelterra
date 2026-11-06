@@ -43,6 +43,7 @@ async function textoObservaciones(remitoId: string, etapa: string) {
 export async function crearRemito(input: {
   edificio_id: number;
   ubicacion_origen: "deposito" | "habitaciones";
+  fecha?: string;
   notas?: string;
   items: ItemConteo[];
   enviar: boolean;
@@ -53,7 +54,12 @@ export async function crearRemito(input: {
   const supabase = await createClient();
   const { data: remito, error } = await supabase
     .from("remitos_envio")
-    .insert({ edificio_id: input.edificio_id, ubicacion_origen: input.ubicacion_origen, notas: input.notas || null })
+    .insert({
+      edificio_id: input.edificio_id,
+      ubicacion_origen: input.ubicacion_origen,
+      notas: input.notas || null,
+      ...(input.fecha && /^\d{4}-\d{2}-\d{2}$/.test(input.fecha) ? { fecha: input.fecha } : {}),
+    })
     .select("id")
     .single();
   if (error || !remito) return fallo(error);
